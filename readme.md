@@ -1,3 +1,15 @@
+# grokmem
+
+Multi-stream memory fork of [TeamAssist](https://github.com/drewdeal/TeamAssist).
+
+Same two-layer shape: CycleJS folds events in the browser; EventStore is the append-only backend.
+
+The domain is no longer Dojo CRM. It is chat streams + an always-on index + entity HEAD streams.
+
+See [docs/MODEL.md](docs/MODEL.md). Routes and columns live in `src/menuRoutes.js` and `src/tableViewConfig.js` (`src/tableConfig.js` re-exports).
+
+---
+
 | ![](./readmeAssets/TeamAssistLogo250.png) | TeamAssist is a ready-to-tweak team and program engagement application designed to help transforming organizations connect coaches and other DevOps practitioners with the people they are seeking to help. <br><br>Every enterprise seeking to become a learning organization needs a specialized CRM-to-Lifecycle management application like TeamAssist. |
 | --- |:--- |
 

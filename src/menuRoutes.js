@@ -1,324 +1,345 @@
 import {dateFormat} from "./frpHelpers";
-import {ttLocs, lobs, teamStatus, loginLevels, commitmentTypes, skillCats, soundPrefs} from "./uiConfig";
+import {
+  chatStatus, projectStatus, factStatus, includeTriggers, patchTypes,
+  streamKinds, loginLevels, soundPrefs
+} from "./uiConfig";
 
 function today (){
   return dateFormat(0);
 }
+
 const restreamFormConfig = [
   { label: "Select Restream Type", type: "select", name: "restreamType", opts: {
     dump: "Dump Events", filter: "Filter Events", snap: "Make snapshot", custom: "Custom"
   } },
-  { label: "Target stream prefix (ie. 'c_') Make SURE full target stream does not exist!", type: "text", name: "streamPreTag" },
-//  { label: "Stream Data (display only)", type: "textarea", name: "evtData", rows: 7, cols: 70, disabled: true },
-  { label: "Event ID's to filter: We'll use .split(/\D+/)", type: "textarea", name: "filters", rows: 2, cols: 50 },
+  { label: "Target stream prefix (ie. 'm_') Make SURE full target stream does not exist!", type: "text", name: "streamPreTag" },
+  { label: "Event ID's to filter: We'll use .split(/\\D+/)", type: "textarea", name: "filters", rows: 2, cols: 50 },
   { label: "RelatedID tag on", name: "targetEvent" }
 ]
 
 const mdTemplates = {
-  weeklies: "### What We Planned / Accomplished / Deferred\n\n### What we Learned\n\n### Challenges and Impediments\n\n### What's Next\n\n### Coaching Observations / Progress"
+  episode: "### Sitting\n\n### Decisions\n\n### Corrections\n\n### Open loops\n\n### Entity writes (project / profile)\n",
+  recall: "### Always-on\n- memory-rules HEAD\n- user HEAD\n- live index\n- current chat since last flush\n\n### Summoned\n- matching project HEAD\n- diffs from 1-2 indexed chats\n"
 }
 
 const validRoutes = {
   home: { meta: {
-    name: "TeamAssist - Connecting Coach Practitioners to Those that need Them",    menuName: "Home",
+    name: "grokmem — multi-stream memory",    menuName: "Home",
     panelFn: "Home",
   }},
-  schedule: {
-    meta: {
-      name: "Coaching Schedule", menuName: "Schedule",
-      hstream: "teams",
-      menuLevel: 3,
-      postStream: "schedule",
-      subUrl: {
-        hstream: "schedule",
-      },
-      hardFilt: { status: ["eng", "ch", "qual", "cons", "cont", "vsm"] },
-      formConfig: [
-        { label: "", type: "radio", name: "schType", opts: {
-          cons: "Consult", chr: "Charter", chall: "Challenge"
-        } },
-        { label: "Note", type: "text", name: "schNote", size: 35, maxlength: 35 },
-        { label: "Team Commitment", type: "select", name: "commitment", opts: {
-          loose: "Loosely Considering", tentative: "Tentative", committed: "Committed" // keys tie to css!
-        } },
-        { label: "Key Coach", type: "select", name: "aCoach", opts: "coachers", numIndex: true }, // numIndex: true covers numeric EID
-        { label: "2nd Coach", type: "select", name: "tCoach", opts: "coachers", numIndex: true },
-        { label: "Specific Date/Time", type: "datetime-local", name: "whenStamp" },
-        { label: "Auto-add weeks (5 for challenges)", type: "number", name: "spreadRight" },
-      ]
 
-    }
-  },
-  vsm: {
+  index: {
     meta: {
-      name: "Value Stream Map " + today(),      menuName: "VSM",
-      menuLevel: 10,
-      panelFn: "valueStream",
-      hstream: "teams",
-      postStream: "vsm_",
-      subUrl: {
-        hstream: "vsm_",
-      }
+      name: "Index stream — always loaded", menuName: "Index",
+      hstream: "index",
+      menuLevel: 1,
+      primeTab: "Live catalog",
+      color: "#4bb529",
+      hardFilt: { status: ["indexed", "sealed"] }
     },
-    id: { meta: {
-      name: "Team",
+    archived: { meta: {
+      name: "Index archive (cold catalog)",
+      hstream: "index",
       menuLevel: 3,
-
-      formConfig: [
-        { label: "Step Name", type: "text", name: "name", size: 25, maxlength: 25, req: "Step Name Required" },
-        { label: "Action Type", type: "select", name: "actType", req: "Action Type Required", opts: {
-          design: "Design", code: "Code", devTest: "Dev Test", approve: "Approvals", 
-          build: "Build", intTest: "Integration Test", deploy: "Deployment", other: "Other"
-        } },
-        { label: "Lead Time", type: "number", name: "lTime", min: 0.125, step: 0.125, req: "Lead Time Required" },
-        {  type: "hidden", name: "lTimeType" },
-        { label: "Process Time", type: "number", name: "pTime", min: 0.125, step: 0.125, req: "Process Time Required" },
-        {  type: "hidden", name: "pTimeType" },
-        { label: "% C & A", type: "number", name: "pctAcc", min: 1, max: 100, step: 1 },
-      ],
-
-      metaFormConfig: [
-        { label: "Map Name", type: "text", name: "name", size: 25, maxlength: 35, req: "Map Name Required" },
-        { label: "Trigger Event", type: "text", name: "trigger", req: "Trigger Event Required" },
-        { label: "Edit Mode", type: "select", name: "updateType", req: "Choose Edit Mode", opts: {
-          discovery: "Discovery", correct: "Correction", track: "Track Improvements"
-        } },
-        { label: "Application", type: "text", name: "appStack" },
-        { label: "Notes", type: "text", name: "notes" }
-      ]
-
+      tabPage: true,
+      hardFilt: { status: ["draft"] },
+      color: "#89a0c3"
     }}
   },
-  teams: {
+
+  chats: {
     meta: {
-      name: "Actively TeamAssisting Teams", menuName: "Teams",
-      hstream: "teams",
-      params: { startdate: dateFormat(-1), enddate: dateFormat(31) },
-      hardFilt: { status: ["imm", "eng", "ch", "vsm"] }, // imm kept for backwardsComp
-//    cParams: { vhoid: "", sgid: "", zoneid: "", channelid: "", status: "", preverperiod: "? -1?" },
-      primeTab: "Current Teams",
-      color: "#4bb529"
+      name: "Chat streams", menuName: "Chats",
+      hstream: "chats",
+      menuLevel: 1,
+      primeTab: "Indexed sittings",
+      color: "#57a1e4",
+      hardFilt: { status: ["indexed", "sealed"] }
     },
-    teamLeads: { meta: {
-      name: "Potential TeamAssist Teams", menuName: "Pipeline",
-      hstream: "teams",
-      menuLevel: 3,
-      params: { startdate: dateFormat(-1), enddate: dateFormat(31) },
-      hardFilt: { status: ["qual", "cons", "cont", "vsm", "lead", "pre", "null"] },
+    draft: { meta: {
+      name: "Draft chats (working trees)", menuName: "Drafts",
+      hstream: "chats",
+      menuLevel: 2,
       tabPage: true,
-      color: "#57a1e4"
+      hardFilt: { status: ["draft"] },
+      color: "#89a0c3"
     }},
-    teamsCompleted: { meta: {
-      name: "Completed Teams", menuName: "Pipeline",
-      hstream: "teams",
-      params: { startdate: dateFormat(-1), enddate: dateFormat(31) },
-      hardFilt: { status: ["grad"] },
+    sealed: { meta: {
+      name: "Sealed chats",
+      hstream: "chats",
+      menuLevel: 3,
       tabPage: true,
+      hardFilt: { status: ["sealed"] },
       color: "#f57c00"
     }},
-    teamsAllStatii: { meta: {
-      name: "All Teams",
-      hstream: "teams",
-      menuLevel: 3,
-      params: { startdate: dateFormat(-1), enddate: dateFormat(31) },
+    id: { meta: {
+      name: "Chat stream",
+      menuLevel: 2,
+      hstream: "chats",
+      panelFn: "teamPanel",
+      subUrl: { hstream: "index" }
+    }},
+    modChat: {
+      meta: {
+        name: "Include chat",
+        hstream: "chats",
+        menuLevel: 2,
+        panel: "Promote a sitting into memory (explicit include)",
+        panelFn: "formPanel",
+        formConfig: [
+          { pane: "Identity", name: "identity", color: "#89a0c3"},
+          { label: "Chat id", type: "text", name: "chatId", req: "Stable id for this sitting" },
+          { label: "Title", type: "text", name: "title", req: "Short catalog title" },
+          { label: "Status", type: "select", name: "status", opts: chatStatus },
+          { label: "Include trigger", type: "select", name: "includeTrigger", opts: includeTriggers },
+          { pane: "Episode patch (not a dump)", name: "episode", color: "#57a1e4"},
+          { label: "One liner", type: "text", name: "oneLiner", size: 72, maxlength: 160 },
+          { label: "Episode summary", type: "textarea", name: "episodeSummary", rows: 8, cols: 72, markDown: true, tmplLoader: mdTemplates.episode },
+          { label: "Actors", type: "text", name: "actors" },
+          { label: "Open loop count", type: "number", name: "openLoopCount", min: 0, step: 1 },
+          { pane: "Dual-write targets", name: "dual", color: "#4bb529"},
+          { label: "Linked projects (comma)", type: "text", name: "projects", title: "Writes the same patch onto those project streams" },
+          { label: "Write profile patch?", type: "checkbox", name: "writeUser", value: 1 },
+          { label: "Store raw transcript blob?", type: "checkbox", name: "storeBlob", value: 1, title: "Optional. Recall never reads the blob." }
+        ]
+      },
+      id: { meta: {
+        name: "Flush chat", menuName: "Flush",
+        buttonText: "Append episode commit",
+        additionalFormConfig: [
+          { pane: "Periodic flush", name: "flush", color: "#0eadb5"},
+          { label: "Patch type", type: "select", name: "patchType", opts: patchTypes },
+          { label: "Parent commit", type: "text", name: "parentCommit" },
+          { label: "Patch body", type: "textarea", name: "patchBody", rows: 10, cols: 72, markDown: true, journal: true },
+          { label: "Seal after this flush", type: "checkbox", name: "sealAfter", value: 1 },
+          { pane: "Index row", name: "indexWrite", color: "#4bb529"},
+          { label: "Update index on flush", type: "checkbox", name: "touchIndex", value: 1 },
+          { label: "Permanently DELETE", type: "checkbox", name: "statusDELETE", value: 1 }
+        ],
+        panel: "Append a structured patch to this chat stream and optionally the index"
+      }}
+    }
+  },
+
+  projects: {
+    meta: {
+      name: "Entity / project streams (belief HEAD)", menuName: "Projects",
+      hstream: "projects",
+      menuLevel: 1,
+      primeTab: "Active entities",
+      color: "#4bb529",
+      hardFilt: { status: ["active"] }
+    },
+    parked: { meta: {
+      name: "Parked entities",
+      hstream: "projects",
+      menuLevel: 2,
       tabPage: true,
+      hardFilt: { status: ["parked"] },
+      color: "#57a1e4"
+    }},
+    projArchived: { meta: {
+      name: "Archived entities",
+      hstream: "projects",
+      menuLevel: 3,
+      tabPage: true,
+      hardFilt: { status: ["archived"] },
+      color: "#f57c00"
     }},
     id: { meta: {
-      name: "Team",
-      menuLevel: 3,
-      hstream: "teams",
-      subUrl: {
-        hstream: "vsm_",
-      },
+      name: "Project HEAD",
+      menuLevel: 2,
+      hstream: "projects",
       panelFn: "teamPanel",
+      subUrl: { hstream: "chats" }
     }},
-    teamReports: { meta: {
-      name: "Recent Team Event Updates - " + today(),      menuName: "Reports",
-      menuLevel: 3,
-      panelFn: "teamReports",
-      hstream: "teams",
-    }},
-    modTeam: {
+    modProject: {
       meta: {
-        name: "Add Team",
-        hstream: "teams",
-        menuLevel: 3,
-        panel: "Add a New Team to TeamAssist",
+        name: "Add entity stream",
+        hstream: "projects",
+        menuLevel: 2,
+        panel: "Create a project or entity stream for current beliefs",
         panelFn: "formPanel",
         formConfig: [
-            { pane: "Initial Contact", name: "initial", color: "#89a0c3"},
-          { label: "Project Name (Team Name)", type: "text", name: "project" },
-          { label: "Team Contact", type: "text", name: "contactName" },
-          { label: "Contact Email", type: "email", name: "contactEmail" },
-          { label: "TeamAssist Location", req: "You must select a Location", type: "select", name: "ttLoc", opts: ttLocs },
-          // { label: "Line of Business", type: "select", name: "lob", opts: lobs },
-          { label: "What's your goal?", type: "textarea", name: "keyGoal", rows: 3, cols: 72, markDown: true },
+          { pane: "Entity", name: "entity", color: "#89a0c3"},
+          { label: "Stream key (project-teamassist)", type: "text", name: "streamKey", req: "Stable stream name" },
+          { label: "Display name", type: "text", name: "name", req: "Name required" },
+          { label: "Kind", type: "select", name: "kind", opts: streamKinds },
+          { label: "Status", type: "select", name: "status", opts: projectStatus },
+          { label: "One-line HEAD", type: "textarea", name: "headBlurb", rows: 3, cols: 72 }
         ]
       },
       id: { meta: {
-        name: "Update Team", menuName: "Update Team",
-        buttonText: "Update Team Record",
+        name: "Append entity patch", menuName: "Patch entity",
+        buttonText: "Project to HEAD",
         additionalFormConfig: [
-            { pane: "Status/Size/Pipeline", name: "pipeline", color: "#57a1e4"},
-          { label: "Team Status", type: "select", name: "status", opts: teamStatus },
-          { label: "Team Size", type: "number", name: "teamSize" },
-          { label: "Last Contacted", type: "date", name: "lastContactedDate" },
-          { label: "Pipeline Notes", type: "textarea", name: "salesNotes", rows: 7, cols: 35, journal: true  },
-          { label: "Next Contact Date", type: "date", name: "nextContactDate" },
-            { pane: "Activation Data", name: "active", color: "#0eadb5"},
-          // { label: "Team Name", req: "6", type: "text", name: "teamName" }, // initial unique val for adds
-          { label: "Challenge Description", type: "textarea", name: "description", rows: 3, cols: 72 },
-          // { label: "Challenge Start Date", type: "date", name: "challengeStartDate" },
-          { label: "Elevator Pitch", type: "textarea", name: "elevatorPitchChallengeDescription", rows: 2, cols: 72 },
-          { label: "Confluence Link", type: "text", name: "confluence" },
-          { label: "Application ID", type: "text", name: "vastId", title: "."  },
-          { label: "Team Color", type: "color", name: "color" }, // fixed naming convention for broad use
-            { pane: "Challenge Progress/Health", name: "progress", color: "#4bb529"},
-          { label: "Percent Completed", type: "range", min: 0, max: 100, step: 5, name: "percComplete", title: " __% complete on current engagement" },
-          { label: "Coaches Notes", type: "textarea", name: "coachNotes", rows: 7, cols: 35, journal: true },
-            { pane: "Weekly Reporting", name: "weeklies", color: "#4bb529"},
-          { label: "Start Up Report", type: "textarea", name: "weeklyReport0", rows: 5, cols: 72, markDown: true},
-          { label: "Week 1 Report", type: "textarea", name: "weeklyReport1", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-          { label: "Week 2 Report", type: "textarea", name: "weeklyReport2", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-          { label: "Week 3 Report", type: "textarea", name: "weeklyReport3", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-          { label: "Week 4 Report", type: "textarea", name: "weeklyReport4", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-          { label: "Week 5 Report", type: "textarea", name: "weeklyReport5", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-          { label: "Week 6 Report", type: "textarea", name: "weeklyReport6", rows: 5, cols: 72, markDown: true, tmplLoader: mdTemplates.weeklies },
-            { pane: "Challenge Outcomes", name: "completed", color: "#ffa726"},
-          // { label: "Challenge End Date", type: "date", name: "challengeEndDate" },
-          { label: "Practices Learned", type: "text", name: "keyPracticesLearned" },
-          { label: "Business Impact", type: "textarea", name: "businessImpact", rows: 3, cols: 72 },
-          { label: "Speed to Value Improvement", type: "text", name: "speedToValueImprovement" },
-          { label: "Post TeamAssist Follow Up Notes", type: "textarea", name: "followUp", rows: 7, cols: 35, journal: true},
-            { pane: "Additional Settings / Forking", name: "meta"},
-          { label: "Primary Point of Contact", type: "select", name: "keyCoach", opts: "coachers", numIndex: true },
-          { label: "Forking! Create new Engagement lead record from this", type: "text", name: "forkProject", tooltipPos: "bottom",  tooltip: "Submitting with this field will:\n - Create new record with this as parent.\n - Append this field to current name.\n - Redirect you to form for new record to enter new Target Type, etc.\n - NOT update this record at all." },
-          { label: "Permanently DELETE", type: "checkbox", name: "statusDELETE", value: 1 },
+          { pane: "Belief patch", name: "belief", color: "#57a1e4"},
+          { label: "Fact key", type: "text", name: "factKey", req: "Identity of the belief" },
+          { label: "Fact status", type: "select", name: "factStatus", opts: factStatus },
+          { label: "Patch type", type: "select", name: "patchType", opts: patchTypes },
+          { label: "New value", type: "textarea", name: "value", rows: 6, cols: 72, markDown: true },
+          { label: "Prior value (diff)", type: "textarea", name: "priorValue", rows: 4, cols: 72, journal: true },
+          { label: "Source chat id", type: "text", name: "sourceChatId" },
+          { label: "Source commit", type: "text", name: "sourceCommit" },
+          { pane: "Lifecycle", name: "life", color: "#ffa726"},
+          { label: "Fork new entity from this HEAD", type: "text", name: "forkProject", tooltipPos: "bottom", tooltip: "Creates a child entity stream. Does not mutate this HEAD." },
+          { label: "Permanently DELETE", type: "checkbox", name: "statusDELETE", value: 1 }
         ],
-        panel: "Update information for team"
+        panel: "Append a belief patch. HEAD is the fold of this stream."
       }}
     }
   },
-  skills: {
+
+  profile: {
     meta: {
-      name: "Skills",      menuName: "Skills",
-      menuLevel: 5,
-      hstream: "skills",
+      name: "User profile HEAD (user-drew)", menuName: "Profile",
+      hstream: "users",
+      menuLevel: 1,
+      color: "#0eadb5"
     },
-    modSkills: { 
+    modProfile: {
       meta: {
-        name: "Add Skill",
-        menuLevel: 5,
-        hstream: "skills",
-        panel: "Add a New Skill Tag",
+        name: "Seed profile",
+        hstream: "users",
+        menuLevel: 2,
+        panel: "Stable facts about the human — always loaded with the index",
         panelFn: "formPanel",
         formConfig: [
-          // { pane: "Basic Profile Information", name: "basic"},
-          { label: "Skill Tag", type: "text", name: "tag", req: "1" },
-          { label: "Skill Category", req: "Select most relevant category", type: "select", name: "category", opts: skillCats},
-          { label: "Practitioner Only?", type: "checkbox", name: "pracOnly", value: 1},
+          { pane: "Identity", name: "basic"},
+          { label: "Display name", type: "text", name: "displayName", req: "Name required" },
+          { label: "Stream key", type: "text", name: "streamKey" },
+          { label: "Access Level", accessLevel: 3, sessValFilter: true, type: "select",
+            name: "loginLevel", opts: loginLevels, numIndex: true }
         ]
       },
       id: { meta: {
-        name: "Update Skill Tag",
-        menuLevel: 5,
-        // additionalFormConfig: []
+        name: "Patch profile", menuName: "Patch profile",
+        menuLevel: 2,
+        additionalFormConfig: [
+          { pane: "Always-on facts", name: "prefs"},
+          { label: "Style / constraints", type: "textarea", name: "style", rows: 6, cols: 72, journal: true },
+          { label: "Tools", type: "textarea", name: "tools", rows: 3, cols: 72 },
+          { label: "Hard constraints", type: "textarea", name: "constraints", rows: 4, cols: 72, journal: true },
+          { label: "Sound Preference", type: "select", name: "soundPref", opts: soundPrefs }
+        ],
+        panel: "Profile is an entity stream loaded every session"
       }}
     }
   },
+
+  rules: {
+    meta: {
+      name: "memory-rules constitution", menuName: "Rules",
+      hstream: "rules",
+      menuLevel: 1,
+      color: "#333"
+    },
+    modRules: {
+      meta: {
+        name: "Set rules",
+        hstream: "rules",
+        menuLevel: 2,
+        panel: "How grokmem records. Always loaded. Short.",
+        panelFn: "formPanel",
+        formConfig: [
+          { pane: "Constitution", name: "const", color: "#333"},
+          { label: "Rule id", type: "text", name: "ruleId", req: "1" },
+          { label: "Rule body", type: "textarea", name: "body", rows: 12, cols: 72, markDown: true, tmplLoader: mdTemplates.recall },
+          { label: "Active", type: "checkbox", name: "active", value: 1 }
+        ]
+      },
+      id: { meta: {
+        name: "Revise rule",
+        additionalFormConfig: [
+          { label: "Revision note", type: "textarea", name: "revNote", rows: 3, cols: 72, journal: true }
+        ]
+      }}
+    }
+  },
+
+  recall: {
+    meta: {
+      name: "Recall pack — " + today(), menuName: "Recall",
+      menuLevel: 1,
+      panelFn: "teamReports",
+      hstream: "index",
+      subUrl: {
+        hstream: "projects"
+      }
+    }
+  },
+
   users: {
     meta: {
-      name: "TeamAssist Users",      menuName: "Users",
+      name: "Actors",      menuName: "Actors",
       menuLevel: 3,
       hstream: "users",
       hardFilt: { loginLevel: [1, 2, 3, 4, 5] },
     },
     modUser: {
       meta: {
-        name: "Add User",
-        menuLevel: 3, // gone
+        name: "Add actor",
+        menuLevel: 3,
         hstream: "users",
-        panel: "Add a New User to TeamAssist",
+        panel: "Add a human or agent that may write streams",
         panelFn: "formPanel",
         formConfig: [
-          { pane: "Basic Profile Information", name: "basic"},
-          { label: "Preferred Display Name (First/Last)", type: "text", name: "displayName", req: "The name you love to hear. YOURS!" },
-          { label: "TeamAssist Location", req: "Most relevant Location", type: "select", name: "ttLoc", opts: ttLocs },
+          { pane: "Actor", name: "basic"},
+          { label: "Preferred Display Name", type: "text", name: "displayName", req: "Required" },
+          { label: "Kind", type: "select", name: "kind", opts: { human: "Human", agent: "Agent" } },
           { label: "Access Level", req: "No blocking yet.", accessLevel: 3, sessValFilter: true, type: "select",
-            name: "loginLevel", opts: loginLevels, numIndex: true, title: "App Permission only settable up to YOUR level!" }
+            name: "loginLevel", opts: loginLevels, numIndex: true }
         ]
       },
       id: { meta: {
-        name: "Update User Profile", menuName: "Add User",
+        name: "Update actor", menuName: "Add actor",
         menuLevel: 4,
         additionalFormConfig: [
-          // { label: "Sound Preference", type: "select", name: "soundPref", opts: soundPrefs},
-          { label: "Email", type: "text", name: "email", title: "Pulled initially from SSO. Many just take the 'one.' off."},
-          { pane: "Team Connection", name: "prefs"},
-          { label: "Line of Business", type: "select", name: "lob", opts: lobs },
-          { label: "Member of Team", type: "select", name: "teamTied", opts: "engagedTeams" },
-          { label: "I'm a Builder/Developer", type: "checkbox", name: "roleBuilder", value: 1},
-          { label: "I'm a User/Consumer", type: "checkbox", name: "roleUser", value: 1},
-          { label: "I'm a Sponsor/Stakeholder", type: "checkbox", name: "roleSponsor", value: 1},
-          { label: "Challenge Hours Commitment", type: "select", name: "teamCommit", opts: commitmentTypes},
+          { label: "Email", type: "text", name: "email"},
+          { label: "Own stream key", type: "text", name: "streamKey" },
           { label: "Sound Preference", type: "select", name: "soundPref", opts: soundPrefs}
         ],
-        panel: "Connect User to Team, LOB, etc"
+        panel: "Actor record"
       }}
-    },
-    activity: { meta: {
-      menuLevel: 5, // uc
-      name: "User Activity  SYSADMIN",
-      hstream: "users",
-    }},
-    usersBySkill: { meta: {
-      menuLevel: 5, // uc
-      name: "User Skills  SYSADMIN",
-      hstream: "users",
-      href: "",
-      subUrl: {
-        hstream: "skills",
-        href: ""
-      }
-    }}
+    }
   },
+
   admin: {
     meta: {
       name: "Admin",
       href: "",
       menuLevel: 5
     },
-    teamsRestream: { 
+    teamsRestream: {
       meta: {
-        name: "UTILITY! - Make Restreams from Streams",      menuName: "Restreaming",
+        name: "UTILITY — Restream",      menuName: "Restreaming",
         menuLevel: 5,
         panelFn: "restream",
-        hstream: "teams",
+        hstream: "index",
         formConfig: restreamFormConfig,
-        primeTab: "Teams Restream"
+        primeTab: "Index Restream"
       },
-      vsmRestream: { meta: {
-        name: "Value Stream Map Restream",
+      chatsRestream: { meta: {
+        name: "Chats Restream",
         menuLevel: 5,
         panelFn: "restream",
-        hstream: "teams",
-        subUrl: { hstream: "vsm_" },
+        hstream: "chats",
         formConfig: restreamFormConfig,
         tabPage: true
       }},
-      scheduleRestream: { meta: {
-        name: "Schedule Restream",
+      projectsRestream: { meta: {
+        name: "Projects Restream",
         menuLevel: 5,
         panelFn: "restream",
-        hstream: "schedule",
+        hstream: "projects",
         formConfig: restreamFormConfig,
         tabPage: true
       }},
-      skillsRestream: { meta: {
-        name: "Skills Restream",
+      rulesRestream: { meta: {
+        name: "Rules Restream",
         menuLevel: 5,
         panelFn: "restream",
-        hstream: "skills",
+        hstream: "rules",
         formConfig: restreamFormConfig,
         tabPage: true
       }},
@@ -329,42 +350,37 @@ const validRoutes = {
         hstream: "users",
         formConfig: restreamFormConfig,
         tabPage: true
-      }},    
+      }},
     },
     bulkImport: { meta: {
       name: "Bulk Stream Import",
-      hstream: "teams",
+      hstream: "index",
       menuLevel: 5,
-      panel: "Dump JSON from previous restreaming backup to TeamAssist",
+      panel: "Dump JSON from a previous restream into grokmem",
       panelFn: "formPanel",
       formConfig: [
         { label: "Paste in JSON", req: "Must paste in valid JSON", type: "textarea", name: "bulkJson", rows: 35, cols: 68 },
         { label: "Append despite eids list", type: "checkbox", name: "override" },
         { label: "Allow Stream bypass", type: "checkbox", name: "allowNoES", title: "(no check on eventStore[hstream] in memory)" },
       ]
-    }},
-    sampleHtml: { meta: {
-      menuLevel: 3, // uc
-      name: "HyperScript example",
-      panel: "sampleHtml", // this is key in panelObj in view
     }}
   },
-  // below is where we'll put all our special routes
+
   loginScreen: { meta: {
-    menuLevel: 10, // over 5 kept from menu
+    menuLevel: 10,
     name: "Login",
     hstream: "users",
     postStream: "session_",
     panelFn: "formPanel",
     makeSess: "eid",
     formConfig: [
-      { pane: "This app requires a valid employee session", name: "Login"},
+      { pane: "Session required to append streams", name: "Login"},
       { label: "Your EID", type: "text", name: "eid", req: "6" },
       { label: "Password", type: "password", name: "password", req: "8", },
     ]
   }},
   register: { meta: {
-    menuLevel: 10, // over 5 kept from menu
+    menuLevel: 10,
     name: "Register for Access",
     hstream: "users",
     postStream: "session_",
@@ -380,24 +396,22 @@ const validRoutes = {
     ]
   }},
   welcomeLevel: { meta: {
-    menuLevel: 10, // over 5 kept from menu
-    name: "Welcome to the TeamAssist!",
+    menuLevel: 10,
+    name: "Welcome to grokmem",
     hstream: "users",
     href: "",
     panelFn: "formPanel",
-    // move this to special validRoutes property
     sessPropForId: "eid",
     formConfig: [
-      { pane: "What role best fits you in the TeamAssist?", name: "roleSelect"},
+      { pane: "What role fits you in grokmem?", name: "roleSelect"},
       { label: "Just Visiting", type: "radio", name: "levelSought", value: "1" },
-      { label: "Team Member", type: "radio", name: "levelSought", value: "2" },
-      { label: "TeamAssist Coach", type: "radio", name: "levelSought", value: "3" },
-      { label: "TeamAssist Admin", type: "radio", name: "levelSought", value: "4" }
-      // sys admin never a choice coming in, but another sys admin can enable!
+      { label: "Member", type: "radio", name: "levelSought", value: "2" },
+      { label: "Editor (may include chats)", type: "radio", name: "levelSought", value: "3" },
+      { label: "Admin", type: "radio", name: "levelSought", value: "4" }
     ]
   }},
   cookiesBlock: { meta: {
-    menuLevel: 10, // over 5 kept from menu
+    menuLevel: 10,
     name: "There was an Error Setting your Session Cookie",
     tmpPanel: "The SSO service ties to session creation code on our server that was not set. "
   }},

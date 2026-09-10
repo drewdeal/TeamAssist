@@ -1,29 +1,71 @@
 'use strict';
 
-const ttLocs = { ct: "Connecticut", vr: "Virtual" }
+// grokmem vocabulary. EventStore host helper is unchanged.
 
-const lobs = ["Customer", "Provider", "Platform", "Client", "Producer"]
+const ttLocs = { local: "Local / Device", cloud: "Hosted API", virtual: "Virtual" }
 
-const teamStatus = { pre: "Prefill", lead: "Lead", cont: "Contacted", 
-  cons: "Consult", qual: "Pre-qualification", ch: "Charter", eng: "Engagement", grad: "Graduated", out: "Opt-Out" }
+const lobs = ["Personal", "Team", "Agent", "Shared"]
 
-const statusColors = { pre: "#aaa", lead: "#89a0c3", cont: "#57a1e4", 
-  cons: "#57d0d6", qual: "#0eadb5", ch: "#79e200", eng: "#4bb529", grad: "#f57c00", out: "#333" }
+const chatStatus = {
+  draft: "Draft (not in index)",
+  indexed: "Indexed",
+  sealed: "Sealed"
+}
 
-const skillCats = { pipeline: "Pipeline", charter: "Charter", agile: "Agile" }
-const loginLevels = ["Access Pending", "Visitor", "Team Member", "TeamAssist Coach", "TeamAssist Admin", "System Admin"] // 0-5
-const commitmentTypes = { demo: "Demos", lead: "Demos & Leadership", core: "Core Member", consult: "Affiliated Consult" }
+const projectStatus = {
+  active: "Active",
+  parked: "Parked",
+  archived: "Archived"
+}
+
+const factStatus = {
+  current: "HEAD / current",
+  superseded: "Superseded",
+  tombstone: "Forgotten"
+}
+
+const includeTriggers = {
+  explicit: "User said include / flush",
+  periodic: "Periodic durable flush",
+  session_end: "Session end"
+}
+
+const patchTypes = {
+  episode: "Episode summary",
+  decision: "Decision",
+  correction: "Correction",
+  preference: "Preference / constraint",
+  open_loop: "Open loop",
+  close_loop: "Closed loop",
+  fact: "Fact"
+}
+
+const streamKinds = {
+  index: "Index (always-on catalog)",
+  chat: "Chat episode stream",
+  user: "User profile HEAD",
+  project: "Project / entity HEAD",
+  rules: "Memory constitution",
+  agent: "Agent working notes"
+}
+
+const loginLevels = ["Access Pending", "Visitor", "Member", "Editor", "Admin", "System Admin"]
+const commitmentTypes = { observe: "Observe only", write: "May append", gate: "May gate into HEAD" }
 const soundPrefs = { debug: "Debug beep on all views", normal: "Occasional Highlights", none: "None" }
+const skillCats = { memory: "Memory", recall: "Recall", project: "Project" }
+
+// aliases so leftover TeamAssist imports do not explode
+const teamStatus = chatStatus
+const statusColors = { draft: "#89a0c3", indexed: "#57a1e4", sealed: "#f57c00",
+  active: "#4bb529", parked: "#57a1e4", archived: "#333" }
+
 const ENTER_KEY = 13;
 const ESC_KEY = 27;
-
-const ES_DIT_HOST = "dev.url";
 
 function getEventStoreUrl (stream) {
   const protocol = window.location.href.split(":")[0];
   const debug = window.location.href.match(/debug/);
   const host = window.location.href.match(/localhost/) ? "localhost" : location.host
-  // let url = `${protocol}://${host}/TeamAssistdb`;
   let url = `${protocol}://${host}:2113`;
 
   if (debug) {
@@ -37,4 +79,8 @@ function getEventStoreUrl (stream) {
   return url;
 }
 
-export {ttLocs, lobs, teamStatus, statusColors, skillCats, loginLevels, commitmentTypes, soundPrefs, ENTER_KEY, ESC_KEY, getEventStoreUrl};
+export {
+  ttLocs, lobs, teamStatus, statusColors, chatStatus, projectStatus, factStatus,
+  includeTriggers, patchTypes, streamKinds, skillCats, loginLevels,
+  commitmentTypes, soundPrefs, ENTER_KEY, ESC_KEY, getEventStoreUrl
+};

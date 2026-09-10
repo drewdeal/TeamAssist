@@ -49,7 +49,7 @@ function getWebService (svc) {
     return [ { svc: svc, s: svc.req.hstream, data: { rows: lsObj.cachedData } } ];
   }
 
-  const preTagMap = { teams: "c_" } // change AFTER a restream!
+  const preTagMap = { index: "m_", chats: "m_", projects: "m_", rules: "m_", users: "m_" } // grokmem prefix
   const pageStr = svc.postData ? "" : (svc.pagingUrl || determineStreamPaging(lsObj))
   const stream = (svc.req.noPreTag ? "" : (preTagMap[svc.req.hstream] || "b_")) + svc.req.hstream + pageStr +
     (svc.postData ? "" : svc.req.href || "?embed=tryharder"); // hstream + path additions
